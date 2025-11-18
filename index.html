@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF工具箱 - 专业的PDF拆分与合并工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-btn {
+            flex: 1;
+            max-width: 200px;
+            padding: 12px 24px;
+            background: transparent;
+            color: white;
+            border: none;
+            border-radius: 45px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.2);
+        }
+
+        /* Main Content */
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 3px dashed #e0e6ed;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8fafc;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f1f5f9;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* File List */
+        .file-list {
+            margin-top: 20px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Page Range Input */
+        .page-range {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .page-input {
+            width: 80px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .page-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        /* Preview Area */
+        .preview-area {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .preview-title {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .preview-content {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            color: #64748b;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Drag and Drop for Merge */
+        .merge-list {
+            min-height: 200px;
+        }
+
+        .draggable {
+            cursor: move;
+        }
+
+        .drag-handle {
+            color: #94a3b8;
+            cursor: grab;
+            margin-right: 10px;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                padding: 25px;
+            }
+
+            .tab-nav {
+                flex-direction: column;
+                border-radius: 15px;
+            }
+
+            .tab-btn {
+                max-width: none;
+                margin-bottom: 5px;
+                border-radius: 10px;
+            }
+
+            .page-range {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+
+            .file-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .file-actions {
+                justify-content: center;
+            }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .gap-10 {
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📄 PDF工具箱</h1>
+            <p>专业的PDF拆分与合并工具，简单高效，保护隐私</p>
+            
+            <!-- Tab Navigation -->
+            <nav class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('split')">
+                    ✂️ 拆分PDF
+                </button>
+                <button class="tab-btn" onclick="switchTab('merge')">
+                    🔗 合并PDF
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- PDF Split Tab -->
+            <div id="split-tab" class="tab-content active">
+                <h2 style="margin-bottom: 20px; color: #334155;">📄 PDF拆分工具</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">上传PDF文件，指定页码范围，快速拆分出您需要的部分</p>
+                
+                <!-- Upload Area -->
+                <div class="upload-area" onclick="document.getElementById('split-file-input').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击选择或拖拽PDF文件到此处</div>
+                    <div class="upload-hint">支持PDF格式，最大50MB</div>
+                    <input type="file" id="split-file-input" class="file-input" accept=".pdf" onchange="handleSplitFileSelect(event)">
+                </div>
+
+                <!-- File Info -->
+                <div id="split-file-info" class="hidden">
+                    <div class="file-list">
+                        <div class="file-item">
+                            <div class="file-icon">PDF</div>
+                            <div class="file-info">
+                                <div class="file-name" id="split-filename">文档.pdf</div>
+                                <div class="file-size" id="split-filesize">2.5 MB • 共 <span id="total-pages">0</span> 页</div>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn btn-secondary" onclick="clearSplitFile()">移除</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page Range Selection -->
+                    <div class="page-range">
+                        <label style="font-weight: 600; color: #334155;">选择页码范围：</label>
+                        <div class="flex items-center gap-10">
+                            <span>从第</span>
+                            <input type="number" id="start-page" class="page-input" min="1" value="1" onchange="validatePageRange()">
+                            <span>页到第</span>
+                            <input type="number" id="end-page" class="page-input" min="1" value="1" onchange="validatePageRange()">
+                            <span>页</span>
+                        </div>
+                        <div style="color: #64748b; font-size: 0.9rem; margin-top: 10px;">
+                            将提取 <span id="page-count">1</span> 页内容
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-20">
+                        <button class="btn btn-primary" onclick="splitPdf()" id="split-btn">
+                            ✂️ 开始拆分
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="split-preview" class="preview-area hidden">
+                    <div class="preview-header">
+                        <h3 class="preview-title">📋 拆分预览</h3>
+                        <div>
+                            <button class="btn btn-secondary" onclick="resetSplit()">重新拆分</button>
+                            <button class="btn btn-success" onclick="downloadSplitResult()">
+                                💾 下载文件
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div>
+                            <div style="font-size: 2rem; margin-bottom: 15px;">✅</div>
+                            <div style="font-weight: 600; margin-bottom: 10px;">拆分完成！</div>
+                            <div id="split-result-info">已成功提取第1-5页，共5页内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Merge Tab -->
+            <div id="merge-tab" class="tab-content">
+                <h2 style="margin-bottom: 20px; color: #334155;">🔗 PDF合并工具</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">上传多个PDF文件，拖拽调整顺序，一键合并成单个文件</p>
+                
+                <!-- Upload Area -->
+                <div class="upload-area" onclick="document.getElementById('merge-file-input').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击选择或拖拽多个PDF文件到此处</div>
+                    <div class="upload-hint">支持PDF格式，可选择多个文件，最大50MB</div>
+                    <input type="file" id="merge-file-input" class="file-input" accept=".pdf" multiple onchange="handleMergeFileSelect(event)">
+                </div>
+
+                <!-- File List -->
+                <div id="merge-file-list" class="file-list merge-list hidden">
+                    <h3 style="margin-bottom: 15px; color: #334155;">📑 文件列表 <span style="font-size: 0.9rem; color: #64748b;">(拖拽调整合并顺序)</span></h3>
+                    <div id="merge-files-container"></div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-20">
+                        <button class="btn btn-secondary" onclick="clearMergeFiles()">清空列表</button>
+                        <button class="btn btn-primary" onclick="mergePdf()" id="merge-btn">
+                            🔗 开始合并
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="merge-preview" class="preview-area hidden">
+                    <div class="preview-header">
+                        <h3 class="preview-title">📋 合并预览</h3>
+                        <div>
+                            <button class="btn btn-secondary" onclick="resetMerge()">重新合并</button>
+                            <button class="btn btn-success" onclick="downloadMergeResult()">
+                                💾 下载文件
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div>
+                            <div style="font-size: 2rem; margin-bottom: 15px;">✅</div>
+                            <div style="font-weight: 600; margin-bottom: 10px;">合并完成！</div>
+                            <div id="merge-result-info">已成功合并3个文件，共25页内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables
+        let splitFile = null;
+        let mergeFiles = [];
+        let splitResult = null;
+        let mergeResult = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // File size formatter
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Split PDF Functions
+        function handleSplitFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                splitFile = file;
+                showSplitFileInfo(file);
+            } else {
+                showMessage('请选择有效的PDF文件', 'error');
+            }
+        }
+
+        function showSplitFileInfo(file) {
+            document.getElementById('split-filename').textContent = file.name;
+            document.getElementById('split-filesize').innerHTML = `${formatFileSize(file.size)} • 共 <span id="total-pages">20</span> 页`; // Mock page count
+            document.getElementById('total-pages').textContent = '20'; // Mock
+            document.getElementById('end-page').value = '20';
+            document.getElementById('end-page').max = '20';
+            document.getElementById('start-page').max = '20';
+            document.getElementById('split-file-info').classList.remove('hidden');
+            validatePageRange();
+        }
+
+        function validatePageRange() {
+            const startPage = parseInt(document.getElementById('start-page').value) || 1;
+            const endPage = parseInt(document.getElementById('end-page').value) || 1;
+            const totalPages = parseInt(document.getElementById('total-pages').textContent) || 1;
+            
+            if (startPage > endPage) {
+                document.getElementById('start-page').value = endPage;
+            }
+            if (endPage > totalPages) {
+                document.getElementById('end-page').value = totalPages;
+            }
+            if (startPage < 1) {
+                document.getElementById('start-page').value = 1;
+            }
+            
+            const finalStart = parseInt(document.getElementById('start-page').value);
+            const finalEnd = parseInt(document.getElementById('end-page').value);
+            const pageCount = finalEnd - finalStart + 1;
+            document.getElementById('page-count').textContent = pageCount;
+        }
+
+        function clearSplitFile() {
+            splitFile = null;
+            document.getElementById('split-file-info').classList.add('hidden');
+            document.getElementById('split-preview').classList.add('hidden');
+            document.getElementById('split-file-input').value = '';
+        }
+
+        function splitPdf() {
+            if (!splitFile) return;
+            
+            const startPage = parseInt(document.getElementById('start-page').value);
+            const endPage = parseInt(document.getElementById('end-page').value);
+            const pageCount = endPage - startPage + 1;
+            
+            // Show loading
+            const btn = document.getElementById('split-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading"></span> 正在拆分...';
+            btn.disabled = true;
+            
+            // Simulate processing
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                // Show result
+                document.getElementById('split-result-info').textContent = 
+                    `已成功提取第${startPage}-${endPage}页，共${pageCount}页内容`;
+                document.getElementById('split-preview').classList.remove('hidden');
+                
+                showMessage('PDF拆分成功！', 'success');
+                splitResult = { startPage, endPage, pageCount };
+            }, 2000);
+        }
+
+        function downloadSplitResult() {
+            if (!splitResult) return;
+            showMessage('下载功能需要后端支持，这里仅为演示', 'info');
+        }
+
+        function resetSplit() {
+            document.getElementById('split-preview').classList.add('hidden');
+            splitResult = null;
+        }
+
+        // Merge PDF Functions
+        function handleMergeFileSelect(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (file.type === 'application/pdf') {
+                    mergeFiles.push({
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        name: file.name,
+                        size: file.size,
+                        pages: Math.floor(Math.random() * 20) + 5 // Mock page count
+                    });
+                }
+            });
+            
+            if (files.length > 0) {
+                updateMergeFileList();
+                document.getElementById('merge-file-list').classList.remove('hidden');
+            }
+        }
+
+        function updateMergeFileList() {
+            const container = document.getElementById('merge-files-container');
+            container.innerHTML = '';
+            
+            mergeFiles.forEach((fileInfo, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item draggable';
+                fileItem.draggable = true;
+                fileItem.dataset.index = index;
+                
+                fileItem.innerHTML = `
+                    <div class="drag-handle">⋮⋮</div>
+                    <div class="file-icon">PDF</div>
+                    <div class="file-info">
+                        <div class="file-name">${fileInfo.name}</div>
+                        <div class="file-size">${formatFileSize(fileInfo.size)} • ${fileInfo.pages} 页</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-danger" onclick="removeMergeFile(${index})">移除</button>
+                    </div>
+                `;
+                
+                // Add drag and drop event listeners
+                fileItem.addEventListener('dragstart', handleDragStart);
+                fileItem.addEventListener('dragover', handleDragOver);
+                fileItem.addEventListener('drop', handleDrop);
+                
+                container.appendChild(fileItem);
+            });
+        }
+
+        function removeMergeFile(index) {
+            mergeFiles.splice(index, 1);
+            updateMergeFileList();
+            
+            if (mergeFiles.length === 0) {
+                document.getElementById('merge-file-list').classList.add('hidden');
+            }
+        }
+
+        function clearMergeFiles() {
+            mergeFiles = [];
+            document.getElementById('merge-file-list').classList.add('hidden');
+            document.getElementById('merge-file-input').value = '';
+        }
+
+        // Drag and Drop for reordering
+        let draggedIndex = null;
+
+        function handleDragStart(e) {
+            draggedIndex = parseInt(e.target.dataset.index);
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const dropIndex = parseInt(e.target.closest('.file-item').dataset.index);
+            
+            if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                const draggedFile = mergeFiles[draggedIndex];
+                mergeFiles.splice(draggedIndex, 1);
+                mergeFiles.splice(dropIndex, 0, draggedFile);
+                updateMergeFileList();
+            }
+            
+            draggedIndex = null;
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.style.opacity = '1';
+            });
+        }
+
+        function mergePdf() {
+            if (mergeFiles.length < 2) {
+                showMessage('至少需要2个PDF文件才能合并', 'error');
+                return;
+            }
+            
+            // Show loading
+            const btn = document.getElementById('merge-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading"></span> 正在合并...';
+            btn.disabled = true;
+            
+            // Simulate processing
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                const totalPages = mergeFiles.reduce((sum, file) => sum + file.pages, 0);
+                
+                // Show result
+                document.getElementById('merge-result-info').textContent = 
+                    `已成功合并${mergeFiles.length}个文件，共${totalPages}页内容`;
+                document.getElementById('merge-preview').classList.remove('hidden');
+                
+                showMessage('PDF合并成功！', 'success');
+                mergeResult = { fileCount: mergeFiles.length, totalPages };
+            }, 3000);
+        }
+
+        function downloadMergeResult() {
+            if (!mergeResult) return;
+            showMessage('下载功能需要后端支持，这里仅为演示', 'info');
+        }
+
+        function resetMerge() {
+            document.getElementById('merge-preview').classList.add('hidden');
+            mergeResult = null;
+        }
+
+        // Utility Functions
+        function showMessage(message, type) {
+            // Create message element
+            const messageEl = document.createElement('div');
+            messageEl.className = `status-message status-${type}`;
+            messageEl.textContent = message;
+            
+            // Insert at the top of main content
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(messageEl, mainContent.firstChild);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                messageEl.remove();
+            }, 3000);
+        }
+
+        // Drag and Drop for upload areas
+        document.querySelectorAll('.upload-area').forEach(area => {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            
+            area.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+            });
+            
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (area.querySelector('#split-file-input')) {
+                    // Split area
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.type === 'application/pdf') {
+                            splitFile = file;
+                            showSplitFileInfo(file);
+                        } else {
+                            showMessage('请选择有效的PDF文件', 'error');
+                        }
+                    }
+                } else {
+                    // Merge area
+                    handleMergeFileSelect({ target: { files } });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

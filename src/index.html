@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= htmlWebpackPlugin.options.title %></title>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📄 PDF工具箱</h1>
+            <p>专业的PDF拆分与合并工具，简单高效，保护隐私</p>
+            
+            <!-- Tab Navigation -->
+            <nav class="tab-nav" data-testid="tab-nav">
+                <button class="tab-btn active" data-testid="split-tab" data-tab="split">
+                    ✂️ 拆分PDF
+                </button>
+                <button class="tab-btn" data-testid="merge-tab" data-tab="merge">
+                    🔗 合并PDF
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- PDF Split Tab -->
+            <div id="split-tab" class="tab-content active" data-testid="split-tab-content">
+                <h2 style="margin-bottom: 20px; color: #334155;">📄 PDF拆分工具</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">上传PDF文件，指定页码范围，快速拆分出您需要的部分</p>
+                
+                <!-- Upload Area -->
+                <div class="upload-area-container" id="split-upload-container"></div>
+
+                <!-- File Info -->
+                <div id="split-file-info" class="hidden">
+                    <div class="file-list">
+                        <div class="file-item">
+                            <div class="file-icon">PDF</div>
+                            <div class="file-info">
+                                <div class="file-name" id="split-filename">文档.pdf</div>
+                                <div class="file-size" id="split-filesize">2.5 MB • 共 <span id="total-pages" data-testid="total-pages">0</span> 页</div>
+                            </div>
+                            <div class="file-actions">
+                                <button class="btn btn-secondary" id="clear-split-file">移除</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page Range Selection -->
+                    <div class="page-range-container" id="page-range-container"></div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-20">
+                        <button class="btn btn-primary" id="split-btn" data-testid="split-btn">
+                            ✂️ 开始拆分
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="split-preview" class="preview-area hidden" data-testid="split-preview">
+                    <div class="preview-header">
+                        <h3 class="preview-title">📋 拆分预览</h3>
+                        <div>
+                            <button class="btn btn-secondary" id="reset-split">重新拆分</button>
+                            <button class="btn btn-success" id="download-split-result" data-testid="download-split-result">
+                                💾 下载文件
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div>
+                            <div style="font-size: 2rem; margin-bottom: 15px;">✅</div>
+                            <div style="font-weight: 600; margin-bottom: 10px;">拆分完成！</div>
+                            <div id="split-result-info" data-testid="split-result-info">已成功提取第1-5页，共5页内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Merge Tab -->
+            <div id="merge-tab" class="tab-content" data-testid="merge-tab-content">
+                <h2 style="margin-bottom: 20px; color: #334155;">🔗 PDF合并工具</h2>
+                <p style="color: #64748b; margin-bottom: 30px;">上传多个PDF文件，拖拽调整顺序，一键合并成单个文件</p>
+                
+                <!-- Upload Area -->
+                <div class="upload-area-container" id="merge-upload-container"></div>
+
+                <!-- File List -->
+                <div id="merge-file-list" class="file-list merge-list hidden" data-testid="merge-file-list">
+                    <div id="merge-files-container"></div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="text-center mt-20">
+                        <button class="btn btn-secondary" id="clear-merge-files">清空列表</button>
+                        <button class="btn btn-primary" id="merge-btn" data-testid="merge-btn">
+                            🔗 开始合并
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="merge-preview" class="preview-area hidden" data-testid="merge-preview">
+                    <div class="preview-header">
+                        <h3 class="preview-title">📋 合并预览</h3>
+                        <div>
+                            <button class="btn btn-secondary" id="reset-merge">重新合并</button>
+                            <button class="btn btn-success" id="download-merge-result" data-testid="download-merge-result">
+                                💾 下载文件
+                            </button>
+                        </div>
+                    </div>
+                    <div class="preview-content">
+                        <div>
+                            <div style="font-size: 2rem; margin-bottom: 15px;">✅</div>
+                            <div style="font-weight: 600; margin-bottom: 10px;">合并完成！</div>
+                            <div id="merge-result-info" data-testid="merge-result-info">已成功合并3个文件，共25页内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Error notifications will be inserted here -->
+    <div id="error-notifications"></div>
+</body>
+</html>
