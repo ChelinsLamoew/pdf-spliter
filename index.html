@@ -574,7 +574,6 @@
                     <div class="preview-header">
                         <h3 class="preview-title">📋 合并预览</h3>
                         <div>
-                            <button class="btn btn-secondary" onclick="resetMerge()">重新合并</button>
                             <button class="btn btn-success" onclick="downloadMergeResult()">
                                 💾 下载文件
                             </button>
@@ -835,11 +834,6 @@
         function downloadMergeResult() {
             if (!mergeResult) return;
             showMessage('下载功能需要后端支持，这里仅为演示', 'info');
-        }
-
-        function resetMerge() {
-            document.getElementById('merge-preview').classList.add('hidden');
-            mergeResult = null;
         }
 
         // Utility Functions

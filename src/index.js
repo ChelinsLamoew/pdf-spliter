@@ -35,6 +35,9 @@ class PDFToolbox {
     
     // 设置移动端检测
     this.setupResponsiveDesign();
+    
+    // 初始化按钮状态
+    this.updateMergeButtonState();
   }
 
   initializeComponents() {
@@ -70,16 +73,24 @@ class PDFToolbox {
 
     // 初始化PDF预览组件
     const splitPreviewContainer = document.getElementById('split-pdf-preview-container');
-    this.splitPreviewComponent = new PDFPreviewComponent(splitPreviewContainer, {
-      showThumbnails: true,
-      maxPreviewPages: 5
-    });
+    if (splitPreviewContainer) {
+      this.splitPreviewComponent = new PDFPreviewComponent(splitPreviewContainer, {
+        showThumbnails: true,
+        maxPreviewPages: 5
+      });
+    } else {
+      console.error('拆分预览容器未找到');
+    }
 
     const mergePreviewContainer = document.getElementById('merge-pdf-preview-container');
-    this.mergePreviewComponent = new PDFPreviewComponent(mergePreviewContainer, {
-      showThumbnails: true,
-      maxPreviewPages: 8
-    });
+    if (mergePreviewContainer) {
+      this.mergePreviewComponent = new PDFPreviewComponent(mergePreviewContainer, {
+        showThumbnails: true,
+        maxPreviewPages: 8
+      });
+    } else {
+      console.error('合并预览容器未找到');
+    }
   }
 
   bindEvents() {
@@ -114,10 +125,6 @@ class PDFToolbox {
 
     document.getElementById('merge-btn').addEventListener('click', () => {
       this.mergePdf();
-    });
-
-    document.getElementById('reset-merge').addEventListener('click', () => {
-      this.resetMerge();
     });
 
     document.getElementById('download-merge-result').addEventListener('click', () => {
@@ -195,7 +202,9 @@ class PDFToolbox {
     document.getElementById('split-file-info').classList.add('hidden');
     document.getElementById('split-preview').classList.add('hidden');
     this.splitUploadComponent.reset(); // reset()方法内部会调用enable()
-    this.splitPreviewComponent.clear();
+    if (this.splitPreviewComponent) {
+      this.splitPreviewComponent.clear();
+    }
     this.splitResult = null;
   }
 
@@ -229,12 +238,16 @@ class PDFToolbox {
       document.getElementById('split-preview').classList.remove('hidden');
       
       // 加载PDF预览
-      try {
-        await this.splitPreviewComponent.loadPDF(result.data);
-        this.showMessage('PDF拆分成功！预览已生成', 'success');
-      } catch (previewError) {
-        console.warn('预览生成失败:', previewError);
-        this.showMessage('PDF拆分成功！（预览生成失败，但不影响下载）', 'success');
+      if (this.splitPreviewComponent) {
+        try {
+          await this.splitPreviewComponent.loadPDF(result.data);
+          this.showMessage('PDF拆分成功！预览已生成', 'success');
+        } catch (previewError) {
+          console.warn('预览生成失败:', previewError);
+          this.showMessage('PDF拆分成功！（预览生成失败，但不影响下载）', 'success');
+        }
+      } else {
+        this.showMessage('PDF拆分成功！', 'success');
       }
       
     } catch (error) {
@@ -258,7 +271,9 @@ class PDFToolbox {
 
   resetSplit() {
     document.getElementById('split-preview').classList.add('hidden');
-    this.splitPreviewComponent.clear();
+    if (this.splitPreviewComponent) {
+      this.splitPreviewComponent.clear();
+    }
     this.splitResult = null;
   }
 
@@ -283,6 +298,9 @@ class PDFToolbox {
       // 显示文件列表
       document.getElementById('merge-file-list').classList.remove('hidden');
       
+      // 更新合并按钮状态
+      this.updateMergeButtonState();
+      
     } catch (error) {
       this.errorHandler.handleFileValidationError(error, 'multiple files');
     }
@@ -294,10 +312,46 @@ class PDFToolbox {
     if (this.fileManager.mergeFiles.length === 0) {
       document.getElementById('merge-file-list').classList.add('hidden');
     }
+    
+    // 更新合并按钮状态
+    this.updateMergeButtonState();
   }
 
   handleMergeFileReorder(fromIndex, toIndex) {
     this.fileManager.reorderMergeFiles(fromIndex, toIndex);
+    
+    // 文件顺序改变后，清除旧的合并结果，避免预览数据不匹配
+    if (this.mergeResult) {
+      this.mergeResult = null;
+      // 隐藏预览区域，因为当前预览不再有效
+      document.getElementById('merge-preview').classList.add('hidden');
+      if (this.mergePreviewComponent) {
+        // 只清除PDF数据，不清除DOM结构
+        this.mergePreviewComponent.clearPDFData();
+      }
+    }
+  }
+
+  updateMergeButtonState() {
+    const mergeBtn = document.getElementById('merge-btn');
+    const fileCount = this.fileManager.mergeFiles.length;
+    
+    if (fileCount < 2) {
+      // 禁用合并按钮
+      mergeBtn.disabled = true;
+      mergeBtn.classList.add('disabled');
+      
+      if (fileCount === 0) {
+        mergeBtn.innerHTML = '请先上传PDF文件';
+      } else if (fileCount === 1) {
+        mergeBtn.innerHTML = '再上传1个文件即可合并';
+      }
+    } else {
+      // 启用合并按钮
+      mergeBtn.disabled = false;
+      mergeBtn.classList.remove('disabled');
+      mergeBtn.innerHTML = `合并 ${fileCount} 个PDF文件`;
+    }
   }
 
   clearMergeFiles() {
@@ -306,16 +360,17 @@ class PDFToolbox {
     document.getElementById('merge-file-list').classList.add('hidden');
     document.getElementById('merge-preview').classList.add('hidden');
     this.mergeUploadComponent.reset();
-    this.mergePreviewComponent.clear();
+    if (this.mergePreviewComponent) {
+      this.mergePreviewComponent.clear();
+    }
     this.mergeResult = null;
+    
+    // 更新合并按钮状态
+    this.updateMergeButtonState();
   }
 
   async mergePdf() {
-    if (this.fileManager.mergeFiles.length < 2) {
-      this.showMessage('至少需要2个PDF文件才能合并', 'error');
-      return;
-    }
-    
+    // 按钮状态已经控制了文件数量，这里不需要重复检查
     const btn = document.getElementById('merge-btn');
     const originalText = btn.innerHTML;
     
@@ -340,12 +395,16 @@ class PDFToolbox {
       document.getElementById('merge-preview').classList.remove('hidden');
       
       // 加载PDF预览
-      try {
-        await this.mergePreviewComponent.loadPDF(result.data);
-        this.showMessage('PDF合并成功！预览已生成', 'success');
-      } catch (previewError) {
-        console.warn('预览生成失败:', previewError);
-        this.showMessage('PDF合并成功！（预览生成失败，但不影响下载）', 'success');
+      if (this.mergePreviewComponent) {
+        try {
+          await this.mergePreviewComponent.loadPDF(result.data);
+          this.showMessage('PDF合并成功！预览已生成', 'success');
+        } catch (previewError) {
+          console.warn('预览生成失败:', previewError);
+          this.showMessage('PDF合并成功！（预览生成失败，但不影响下载）', 'success');
+        }
+      } else {
+        this.showMessage('PDF合并成功！', 'success');
       }
       
     } catch (error) {
@@ -369,11 +428,7 @@ class PDFToolbox {
     }
   }
 
-  resetMerge() {
-    document.getElementById('merge-preview').classList.add('hidden');
-    this.mergePreviewComponent.clear();
-    this.mergeResult = null;
-  }
+
 
   onPageRangeChange(range) {
     // 页码范围变化时的处理，可以在这里添加预览等功能

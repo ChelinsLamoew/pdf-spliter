@@ -290,9 +290,21 @@ body {
     gap: 8px;
 }
 
-.btn:disabled {
+.btn:disabled,
+.btn.disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    background: #d1d5db !important;
+    border-color: #d1d5db !important;
+    color: #6b7280 !important;
+}
+
+.btn:disabled:hover,
+.btn.disabled:hover {
+    background: #d1d5db !important;
+    border-color: #d1d5db !important;
+    color: #6b7280 !important;
+    transform: none;
 }
 
 .btn-primary {

@@ -13,6 +13,14 @@ export class PDFPreviewComponent {
     this.totalPages = 0;
     this.scale = 1.2;
     this.canvases = [];
+    this.currentRenderTask = null;
+    this.renderDebounceTimer = null;
+    
+    // 检查容器是否存在
+    if (!this.container) {
+      console.error('PDFPreviewComponent: 容器元素不存在');
+      return;
+    }
     
     this.init();
   }
@@ -95,6 +103,19 @@ export class PDFPreviewComponent {
   }
 
   async loadPDF(pdfData) {
+    // 检查容器是否存在
+    if (!this.container) {
+      console.error('容器不存在，无法加载PDF预览');
+      return;
+    }
+    
+    // 检查DOM结构是否存在，如果不存在则重新创建
+    if (!this.container.querySelector('.pdf-preview-container')) {
+      console.log('DOM结构不存在，重新创建预览结构');
+      this.createPreviewStructure();
+      this.bindEvents();
+    }
+    
     this.showLoading();
     
     try {
@@ -122,12 +143,16 @@ export class PDFPreviewComponent {
       // 渲染第一页
       await this.renderPage(1);
       
-      // 生成缩略图
+      // 等待主页面渲染完成后再生成缩略图
       if (this.options.showThumbnails) {
-        await this.generateThumbnails();
+        // 添加小延迟确保主页面渲染完成
+        setTimeout(async () => {
+          await this.generateThumbnails();
+        }, 200);
       }
       
     } catch (error) {
+      console.error('PDF预览加载失败:', error);
       this.showError('PDF预览加载失败: ' + error.message);
     } finally {
       this.hideLoading();
@@ -138,9 +163,25 @@ export class PDFPreviewComponent {
     if (!this.pdfDoc || pageNum < 1 || pageNum > this.totalPages) return;
     
     try {
+      // 取消之前的渲染任务
+      if (this.currentRenderTask) {
+        this.currentRenderTask.cancel();
+        this.currentRenderTask = null;
+      }
+      
       const page = await this.pdfDoc.getPage(pageNum);
       const canvas = this.container.querySelector('#pdf-canvas');
+      
+      if (!canvas) {
+        console.error('Canvas元素未找到');
+        return;
+      }
+      
       const context = canvas.getContext('2d');
+      if (!context) {
+        console.error('无法获取Canvas上下文');
+        return;
+      }
       
       // 计算视口
       const viewport = page.getViewport({ scale: this.scale });
@@ -155,13 +196,20 @@ export class PDFPreviewComponent {
         viewport: viewport
       };
       
-      await page.render(renderContext).promise;
+      // 开始新的渲染任务
+      this.currentRenderTask = page.render(renderContext);
+      await this.currentRenderTask.promise;
       
       this.currentPage = pageNum;
       this.updatePageInfo();
       this.updateNavigationButtons();
+      this.currentRenderTask = null;
       
     } catch (error) {
+      if (error.name === 'RenderingCancelledException') {
+        console.log('页面渲染被取消');
+        return;
+      }
       console.error('页面渲染失败:', error);
       this.showError('页面渲染失败');
     }
@@ -171,46 +219,20 @@ export class PDFPreviewComponent {
     if (!this.pdfDoc) return;
     
     const thumbnailsGrid = this.container.querySelector('#thumbnails-grid');
+    if (!thumbnailsGrid) {
+      console.warn('缩略图容器未找到，跳过缩略图生成');
+      return;
+    }
+    
     thumbnailsGrid.innerHTML = '';
     
     // 限制缩略图数量以提升性能
     const maxThumbnails = Math.min(this.totalPages, this.options.maxPreviewPages);
     
+    // 使用队列方式逐个生成缩略图，避免并发渲染
     for (let i = 1; i <= maxThumbnails; i++) {
       try {
-        const page = await this.pdfDoc.getPage(i);
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        // 计算缩略图尺寸
-        const viewport = page.getViewport({ scale: 0.3 });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        
-        // 渲染缩略图
-        await page.render({
-          canvasContext: context,
-          viewport: viewport
-        }).promise;
-        
-        // 创建缩略图容器
-        const thumbnailItem = document.createElement('div');
-        thumbnailItem.className = `thumbnail-item ${i === this.currentPage ? 'active' : ''}`;
-        thumbnailItem.innerHTML = `
-          <div class="thumbnail-canvas-container">
-            ${canvas.outerHTML}
-          </div>
-          <div class="thumbnail-label">第 ${i} 页</div>
-        `;
-        
-        // 绑定点击事件
-        thumbnailItem.addEventListener('click', () => {
-          this.renderPage(i);
-          this.updateThumbnailSelection(i);
-        });
-        
-        thumbnailsGrid.appendChild(thumbnailItem);
-        
+        await this.generateSingleThumbnail(i, thumbnailsGrid);
       } catch (error) {
         console.error(`缩略图 ${i} 生成失败:`, error);
       }
@@ -225,6 +247,42 @@ export class PDFPreviewComponent {
     }
   }
 
+  async generateSingleThumbnail(pageNum, container) {
+    const page = await this.pdfDoc.getPage(pageNum);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    // 计算缩略图尺寸
+    const viewport = page.getViewport({ scale: 0.3 });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // 渲染缩略图 - 使用独立的canvas，不会与主预览冲突
+    const renderTask = page.render({
+      canvasContext: context,
+      viewport: viewport
+    });
+    
+    await renderTask.promise;
+    
+    // 创建缩略图容器
+    const thumbnailItem = document.createElement('div');
+    thumbnailItem.className = `thumbnail-item ${pageNum === this.currentPage ? 'active' : ''}`;
+    thumbnailItem.innerHTML = `
+      <div class="thumbnail-canvas-container">
+        ${canvas.outerHTML}
+      </div>
+      <div class="thumbnail-label">第 ${pageNum} 页</div>
+    `;
+    
+    // 绑定点击事件
+    thumbnailItem.addEventListener('click', () => {
+      this.debouncedRenderPage(pageNum);
+    });
+    
+    container.appendChild(thumbnailItem);
+  }
+
   updateThumbnailSelection(pageNum) {
     this.container.querySelectorAll('.thumbnail-item').forEach((item, index) => {
       if (index + 1 === pageNum) {
@@ -237,26 +295,37 @@ export class PDFPreviewComponent {
 
   previousPage() {
     if (this.currentPage > 1) {
-      this.renderPage(this.currentPage - 1);
-      this.updateThumbnailSelection(this.currentPage);
+      this.debouncedRenderPage(this.currentPage - 1);
     }
   }
 
   nextPage() {
     if (this.currentPage < this.totalPages) {
-      this.renderPage(this.currentPage + 1);
-      this.updateThumbnailSelection(this.currentPage);
+      this.debouncedRenderPage(this.currentPage + 1);
     }
   }
 
   zoomIn() {
     this.scale = Math.min(this.scale * 1.2, 3.0);
-    this.renderPage(this.currentPage);
+    this.debouncedRenderPage(this.currentPage);
   }
 
   zoomOut() {
     this.scale = Math.max(this.scale / 1.2, 0.5);
-    this.renderPage(this.currentPage);
+    this.debouncedRenderPage(this.currentPage);
+  }
+
+  debouncedRenderPage(pageNum) {
+    // 清除之前的防抖定时器
+    if (this.renderDebounceTimer) {
+      clearTimeout(this.renderDebounceTimer);
+    }
+    
+    // 设置新的防抖定时器
+    this.renderDebounceTimer = setTimeout(() => {
+      this.renderPage(pageNum);
+      this.updateThumbnailSelection(pageNum);
+    }, 100); // 100ms防抖
   }
 
   updatePageInfo() {
@@ -303,10 +372,28 @@ export class PDFPreviewComponent {
       </div>
     `;
     
-    this.container.querySelector('.pdf-preview-container').innerHTML = errorHtml;
+    const previewContainer = this.container.querySelector('.pdf-preview-container');
+    if (previewContainer) {
+      previewContainer.innerHTML = errorHtml;
+    } else {
+      // 如果预览容器不存在，直接替换整个容器内容
+      this.container.innerHTML = errorHtml;
+    }
   }
 
   clear() {
+    // 取消当前的渲染任务
+    if (this.currentRenderTask) {
+      this.currentRenderTask.cancel();
+      this.currentRenderTask = null;
+    }
+    
+    // 清除防抖定时器
+    if (this.renderDebounceTimer) {
+      clearTimeout(this.renderDebounceTimer);
+      this.renderDebounceTimer = null;
+    }
+    
     this.pdfDoc = null;
     this.currentPage = 1;
     this.totalPages = 0;
@@ -315,6 +402,45 @@ export class PDFPreviewComponent {
     if (this.container) {
       this.container.innerHTML = '';
     }
+  }
+
+  clearPDFData() {
+    // 取消当前的渲染任务
+    if (this.currentRenderTask) {
+      this.currentRenderTask.cancel();
+      this.currentRenderTask = null;
+    }
+    
+    // 清除防抖定时器
+    if (this.renderDebounceTimer) {
+      clearTimeout(this.renderDebounceTimer);
+      this.renderDebounceTimer = null;
+    }
+    
+    // 清除PDF数据但保留DOM结构
+    this.pdfDoc = null;
+    this.currentPage = 1;
+    this.totalPages = 0;
+    this.canvases = [];
+    
+    // 清除canvas内容
+    const canvas = this.container.querySelector('#pdf-canvas');
+    if (canvas) {
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    
+    // 清除缩略图内容
+    const thumbnailsGrid = this.container.querySelector('#thumbnails-grid');
+    if (thumbnailsGrid) {
+      thumbnailsGrid.innerHTML = '';
+    }
+    
+    // 重置页面信息显示
+    this.updatePageInfo();
+    this.updateNavigationButtons();
   }
 
   // 获取当前预览的PDF数据（用于调试）
