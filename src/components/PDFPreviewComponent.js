@@ -103,8 +103,16 @@ export class PDFPreviewComponent {
       pdfjs.GlobalWorkerOptions.workerSrc = 
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+      // 确保pdfData是正确的格式
+      let data = pdfData;
+      if (pdfData instanceof Uint8Array) {
+        data = pdfData.buffer.slice(pdfData.byteOffset, pdfData.byteOffset + pdfData.byteLength);
+      }
+      
+      console.log(`加载PDF预览: 数据大小 ${data.byteLength || data.length} bytes`);
+
       // 加载PDF文档
-      this.pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
+      this.pdfDoc = await pdfjs.getDocument({ data: data }).promise;
       this.totalPages = this.pdfDoc.numPages;
       
       // 更新UI

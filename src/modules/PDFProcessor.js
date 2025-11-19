@@ -132,12 +132,17 @@ export class PDFSplitter {
       
       onProgress?.(100, '完成!');
       
+      // 确保返回正确的Uint8Array格式
+      const resultData = new Uint8Array(pdfBytes);
+      
+      console.log(`PDF拆分完成: 文件大小 ${resultData.length} bytes`);
+      
       return {
         fileName: `${file.name.replace('.pdf', '')}_第${startPage}-${endPage}页.pdf`,
-        data: pdfBytes,
+        data: resultData,
         pageCount: endPage - startPage + 1,
         originalPages: `${startPage}-${endPage}`,
-        size: pdfBytes.length
+        size: resultData.length
       };
       
     } catch (error) {
@@ -223,12 +228,17 @@ export class PDFMerger {
       
       onProgress?.(100, '合并完成!');
       
+      // 确保返回正确的Uint8Array格式
+      const resultData = new Uint8Array(pdfBytes);
+      
+      console.log(`PDF合并完成: 文件大小 ${resultData.length} bytes`);
+      
       return {
         fileName,
-        data: pdfBytes,
+        data: resultData,
         pageCount: totalPages,
         fileCount: files.length,
-        size: pdfBytes.length,
+        size: resultData.length,
         sourceFiles: files.map(f => f.name)
       };
       
