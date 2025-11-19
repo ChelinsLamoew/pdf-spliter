@@ -11,6 +11,7 @@ export class FileUploadComponent {
     };
     
     this.dragCounter = 0;
+    this.isDisabled = false;
     this.init();
   }
 
@@ -20,20 +21,27 @@ export class FileUploadComponent {
   }
 
   render() {
+    const disabledClass = this.isDisabled ? 'disabled' : '';
+    const disabledText = this.isDisabled ? 
+      '已有文件上传，请先移除文件后再重新上传' : 
+      (this.options.multiple ? '点击选择或拖拽多个PDF文件到此处' : '点击选择或拖拽PDF文件到此处');
+    
     this.container.innerHTML = `
-      <div class="upload-area" id="upload-area">
-        <div class="upload-icon">📁</div>
+      <div class="upload-area ${disabledClass}" id="upload-area">
+        <div class="upload-icon">${this.isDisabled ? '🚫' : '📁'}</div>
         <div class="upload-text">
-          ${this.options.multiple ? '点击选择或拖拽多个PDF文件到此处' : '点击选择或拖拽PDF文件到此处'}
+          ${disabledText}
         </div>
         <div class="upload-hint">
-          支持PDF格式，${this.options.multiple ? '可选择多个文件，' : ''}最大${this.formatFileSize(this.options.maxSize)}
+          ${this.isDisabled ? '请使用"移除文件"按钮清除当前文件' : 
+            `支持PDF格式，${this.options.multiple ? '可选择多个文件，' : ''}最大${this.formatFileSize(this.options.maxSize)}`}
         </div>
         <input type="file" 
                id="file-input" 
                class="file-input" 
                accept="${this.options.accept}"
-               ${this.options.multiple ? 'multiple' : ''}>
+               ${this.options.multiple ? 'multiple' : ''}
+               ${this.isDisabled ? 'disabled' : ''}>
       </div>
     `;
   }
@@ -44,23 +52,37 @@ export class FileUploadComponent {
 
     // 点击上传
     uploadArea.addEventListener('click', () => {
+      if (this.isDisabled) {
+        this.showDisabledMessage();
+        return;
+      }
       fileInput.click();
     });
 
     // 文件选择
     fileInput.addEventListener('change', (e) => {
+      if (this.isDisabled) {
+        e.target.value = '';
+        return;
+      }
       this.handleFiles(Array.from(e.target.files));
     });
 
     // 拖拽事件
     uploadArea.addEventListener('dragenter', (e) => {
       e.preventDefault();
+      if (this.isDisabled) {
+        return;
+      }
       this.dragCounter++;
       uploadArea.classList.add('dragover');
     });
 
     uploadArea.addEventListener('dragleave', (e) => {
       e.preventDefault();
+      if (this.isDisabled) {
+        return;
+      }
       this.dragCounter--;
       if (this.dragCounter === 0) {
         uploadArea.classList.remove('dragover');
@@ -75,6 +97,11 @@ export class FileUploadComponent {
       e.preventDefault();
       this.dragCounter = 0;
       uploadArea.classList.remove('dragover');
+      
+      if (this.isDisabled) {
+        this.showDisabledMessage();
+        return;
+      }
       
       const files = Array.from(e.dataTransfer.files);
       this.handleFiles(files);
@@ -132,9 +159,74 @@ export class FileUploadComponent {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  disable() {
+    this.isDisabled = true;
+    this.render();
+    this.bindEvents();
+  }
+
+  enable() {
+    this.isDisabled = false;
+    this.render();
+    this.bindEvents();
+  }
+
+  showDisabledMessage() {
+    // 创建临时提示消息
+    const message = document.createElement('div');
+    message.className = 'upload-disabled-message';
+    message.textContent = '请先移除当前文件后再上传新文件';
+    message.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 1000;
+      pointer-events: none;
+      animation: fadeInOut 2s ease-in-out;
+    `;
+
+    // 添加CSS动画
+    if (!document.querySelector('#upload-message-style')) {
+      const style = document.createElement('style');
+      style.id = 'upload-message-style';
+      style.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    this.container.style.position = 'relative';
+    this.container.appendChild(message);
+
+    // 2秒后移除消息
+    setTimeout(() => {
+      if (message.parentNode) {
+        message.parentNode.removeChild(message);
+      }
+    }, 2000);
+  }
+
   reset() {
-    this.container.querySelector('#file-input').value = '';
+    const fileInput = this.container.querySelector('#file-input');
+    if (fileInput) {
+      fileInput.value = '';
+    }
     this.dragCounter = 0;
-    this.container.querySelector('#upload-area').classList.remove('dragover');
+    const uploadArea = this.container.querySelector('#upload-area');
+    if (uploadArea) {
+      uploadArea.classList.remove('dragover');
+    }
+    this.enable(); // 重置时启用上传功能
   }
 }

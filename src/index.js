@@ -158,6 +158,9 @@ class PDFToolbox {
       // 设置文件到文件管理器
       const fileInfo = this.fileManager.setSplitFile(file);
       
+      // 禁用上传组件
+      this.splitUploadComponent.disable();
+      
       // 显示文件信息
       this.showSplitFileInfo(fileInfo);
       
@@ -175,6 +178,8 @@ class PDFToolbox {
       
     } catch (error) {
       this.errorHandler.handleFileValidationError(error, file.name);
+      // 如果文件处理失败，重新启用上传组件
+      this.splitUploadComponent.enable();
     }
   }
 
@@ -189,7 +194,7 @@ class PDFToolbox {
     this.fileManager.clearSplitFile();
     document.getElementById('split-file-info').classList.add('hidden');
     document.getElementById('split-preview').classList.add('hidden');
-    this.splitUploadComponent.reset();
+    this.splitUploadComponent.reset(); // reset()方法内部会调用enable()
     this.splitPreviewComponent.clear();
     this.splitResult = null;
   }

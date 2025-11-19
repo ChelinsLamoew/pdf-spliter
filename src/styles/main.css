@@ -119,6 +119,31 @@ body {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 }
 
+.upload-area.disabled {
+    border-color: #d1d5db;
+    background: #f9fafb;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.upload-area.disabled:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+    transform: none;
+}
+
+.upload-area.disabled .upload-text {
+    color: #6b7280;
+}
+
+.upload-area.disabled .upload-hint {
+    color: #9ca3af;
+}
+
+.upload-area.disabled .upload-icon {
+    opacity: 0.5;
+}
+
 .upload-icon {
     font-size: 3rem;
     color: #667eea;
