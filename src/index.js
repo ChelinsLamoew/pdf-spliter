@@ -5,6 +5,7 @@ import { ErrorHandler } from './modules/ErrorHandler.js';
 import { FileUploadComponent } from './components/FileUploadComponent.js';
 import { PageRangeSelector } from './components/PageRangeSelector.js';
 import { FileListComponent } from './components/FileListComponent.js';
+import { PDFPreviewComponent } from './components/PDFPreviewComponent.js';
 import { downloadFile } from './utils/downloadUtils.js';
 
 class PDFToolbox {
@@ -19,6 +20,8 @@ class PDFToolbox {
     this.mergeUploadComponent = null;
     this.pageRangeSelector = null;
     this.mergeFileList = null;
+    this.splitPreviewComponent = null;
+    this.mergePreviewComponent = null;
     
     this.splitResult = null;
     this.mergeResult = null;
@@ -63,6 +66,19 @@ class PDFToolbox {
       sortable: true,
       onRemove: (fileId) => this.handleMergeFileRemove(fileId),
       onReorder: (fromIndex, toIndex) => this.handleMergeFileReorder(fromIndex, toIndex)
+    });
+
+    // 初始化PDF预览组件
+    const splitPreviewContainer = document.getElementById('split-pdf-preview-container');
+    this.splitPreviewComponent = new PDFPreviewComponent(splitPreviewContainer, {
+      showThumbnails: true,
+      maxPreviewPages: 5
+    });
+
+    const mergePreviewContainer = document.getElementById('merge-pdf-preview-container');
+    this.mergePreviewComponent = new PDFPreviewComponent(mergePreviewContainer, {
+      showThumbnails: true,
+      maxPreviewPages: 8
     });
   }
 
@@ -174,6 +190,7 @@ class PDFToolbox {
     document.getElementById('split-file-info').classList.add('hidden');
     document.getElementById('split-preview').classList.add('hidden');
     this.splitUploadComponent.reset();
+    this.splitPreviewComponent.clear();
     this.splitResult = null;
   }
 
@@ -206,7 +223,14 @@ class PDFToolbox {
         `已成功提取第${range.startPage}-${range.endPage}页，共${range.pageCount}页内容`;
       document.getElementById('split-preview').classList.remove('hidden');
       
-      this.showMessage('PDF拆分成功！', 'success');
+      // 加载PDF预览
+      try {
+        await this.splitPreviewComponent.loadPDF(result.data);
+        this.showMessage('PDF拆分成功！预览已生成', 'success');
+      } catch (previewError) {
+        console.warn('预览生成失败:', previewError);
+        this.showMessage('PDF拆分成功！（预览生成失败，但不影响下载）', 'success');
+      }
       
     } catch (error) {
       this.errorHandler.handlePDFProcessingError(error, 'split', range);
@@ -229,6 +253,7 @@ class PDFToolbox {
 
   resetSplit() {
     document.getElementById('split-preview').classList.add('hidden');
+    this.splitPreviewComponent.clear();
     this.splitResult = null;
   }
 
@@ -276,6 +301,7 @@ class PDFToolbox {
     document.getElementById('merge-file-list').classList.add('hidden');
     document.getElementById('merge-preview').classList.add('hidden');
     this.mergeUploadComponent.reset();
+    this.mergePreviewComponent.clear();
     this.mergeResult = null;
   }
 
@@ -308,7 +334,14 @@ class PDFToolbox {
         `已成功合并${result.fileCount}个文件，共${result.pageCount}页内容`;
       document.getElementById('merge-preview').classList.remove('hidden');
       
-      this.showMessage('PDF合并成功！', 'success');
+      // 加载PDF预览
+      try {
+        await this.mergePreviewComponent.loadPDF(result.data);
+        this.showMessage('PDF合并成功！预览已生成', 'success');
+      } catch (previewError) {
+        console.warn('预览生成失败:', previewError);
+        this.showMessage('PDF合并成功！（预览生成失败，但不影响下载）', 'success');
+      }
       
     } catch (error) {
       this.errorHandler.handlePDFProcessingError(error, 'merge', {
@@ -333,6 +366,7 @@ class PDFToolbox {
 
   resetMerge() {
     document.getElementById('merge-preview').classList.add('hidden');
+    this.mergePreviewComponent.clear();
     this.mergeResult = null;
   }
 
